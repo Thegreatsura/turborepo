@@ -62,10 +62,8 @@ jobs:
             setup: "sudo apt-get update && sudo apt-get install -y build-essential musl-tools clang llvm gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            setup: "rustup set default-host x86_64-pc-windows-msvc"
           - host: windows-latest
             target: aarch64-pc-windows-msvc
-            setup: "rustup set default-host aarch64-pc-windows-msvc"
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 30
     steps:
