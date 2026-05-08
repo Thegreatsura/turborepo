@@ -5,8 +5,6 @@ import {
   workspace,
   StatusBarAlignment,
   StatusBarItem,
-  TextEditor,
-  Range,
   Uri,
   env
 } from "vscode";
@@ -20,48 +18,11 @@ import {
   ServerOptions
 } from "vscode-languageclient/node";
 
-import { getTaskDefinitionKeyDecorationOffsets } from "./json-decorations";
-
 let client: LanguageClient;
 
 let toolbar: StatusBarItem;
 
-const TURBO_CONFIG_FILES = new Set(["turbo.json", "turbo.jsonc"]);
-
-// thunks passed to this function will executed
-// after no calls have been made for `waitMs` milliseconds
-const useDebounce = <T>(func: (args: T) => void, waitMs: number) => {
-  let timeout: any;
-  return (args: T) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      func(args);
-    }, waitMs);
-  };
-};
-
 const logs = window.createOutputChannel("Turborepo Extension");
-
-function rainbowRgb(i: number) {
-  const f = 0.5;
-  const r = Math.sin(f * i + (4 * Math.PI) / 3) * 127 + 128;
-  const g = 45;
-  const b = Math.sin(f * i) * 127 + 128;
-
-  return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g)
-    .toString(16)
-    .padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`;
-}
-
-const taskDefinitionColors = [...Array(10).keys()]
-  .map(rainbowRgb)
-  .map((color) =>
-    window.createTextEditorDecorationType({
-      color
-    })
-  );
-
-const refreshDecorations = useDebounce(updateJSONDecorations, 1000);
 
 export function activate(context: ExtensionContext) {
   const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -236,34 +197,6 @@ export function activate(context: ExtensionContext) {
 
   toolbar = window.createStatusBarItem(StatusBarAlignment.Left, 100);
 
-  // decorate when changing the active editor editor
-  context.subscriptions.push(
-    window.onDidChangeActiveTextEditor(
-      (editor) => updateJSONDecorations(editor),
-      null,
-      context.subscriptions
-    )
-  );
-
-  // decorate when the document changes
-  context.subscriptions.push(
-    workspace.onDidChangeTextDocument(
-      (event) => {
-        if (
-          window.activeTextEditor &&
-          event.document === window.activeTextEditor.document
-        ) {
-          refreshDecorations(window.activeTextEditor);
-        }
-      },
-      null,
-      context.subscriptions
-    )
-  );
-
-  // decorate the active editor now
-  updateJSONDecorations(window.activeTextEditor);
-
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
 
@@ -327,29 +260,6 @@ function updateStatusBarItem(running: boolean) {
   toolbar.command = running ? "turbo.daemon.stop" : "turbo.daemon.start";
   toolbar.text = running ? "turbo Running" : "turbo Stopped";
   toolbar.show();
-}
-
-function updateJSONDecorations(editor?: TextEditor) {
-  if (
-    !editor ||
-    !TURBO_CONFIG_FILES.has(path.basename(editor.document.fileName))
-  ) {
-    return;
-  }
-
-  const decorationOffsets = getTaskDefinitionKeyDecorationOffsets(
-    editor.document.getText()
-  );
-
-  for (let i = 0; i < decorationOffsets.length; i++) {
-    const index = decorationOffsets[i];
-    editor.setDecorations(taskDefinitionColors[i + 1], [
-      new Range(
-        editor.document.positionAt(index),
-        editor.document.positionAt(index + 1)
-      )
-    ]);
-  }
 }
 
 function quoteCommand(command: string) {
