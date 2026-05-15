@@ -445,12 +445,13 @@ export class LocalRunner {
 
         try {
           // turbo prune
-          log(`[${label}] turbo prune ${targetWorkspace.name}`);
-          const pruneResult = await exec(
-            `turbo prune ${targetWorkspace.name}`,
-            tmpDir,
-            { PATH: fullPath }
-          );
+          const pruneCommand = `turbo prune ${targetWorkspace.name}${
+            tc.docker ? " --docker" : ""
+          }`;
+          log(`[${label}] ${pruneCommand}`);
+          const pruneResult = await exec(pruneCommand, tmpDir, {
+            PATH: fullPath
+          });
 
           result.pruneOutput = [pruneResult.stdout, pruneResult.stderr]
             .filter(Boolean)
@@ -468,12 +469,17 @@ export class LocalRunner {
           log(`[${label}] Prune succeeded`);
 
           // Validate the pruned lockfile without downloading packages.
-          const outDir = path.join(tmpDir, "out");
+          const outDir = tc.docker
+            ? path.join(tmpDir, "out", "json")
+            : path.join(tmpDir, "out");
+          const outLabel = tc.docker ? "out/json" : "out";
           const validation = lockfileValidationCommand(
             fixture.packageManager,
             outDir
           );
-          log(`[${label}] ${validation.command} (lockfile validation in out/)`);
+          log(
+            `[${label}] ${validation.command} (lockfile validation in ${outLabel}/)`
+          );
 
           const validationResult = await this.runLockfileValidation(
             fixture,
